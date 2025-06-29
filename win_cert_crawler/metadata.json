@@ -1,0 +1,36 @@
+{
+    "params": [
+        {
+            "param-name": "operation_mode",
+            "default-value": "opmode1"
+        },
+        {
+            "param-name": "cert1_dir_path",
+            "default-value": "C:/Cert/MyCerts"
+        },
+        {
+            "param-name": "cert1_types",
+            "default-value": ["p12", "pfx", "cer", "crt", "txt", "pem"]
+        },
+        {
+            "param-name": "cert2_dir_path",
+            "default-value": "C:/Cert/MyCerts/Personal"
+        },
+        {
+            "param-name": "cert2_types",
+            "default-value": ["cer", "crt"]
+        },
+        {
+            "param-name": "cert3_dir_path",
+            "default-value": "C:/Cert/MyCerts/Personal/WinConfig"
+        },
+        {
+            "param-name": "cert3_types",
+            "default-value": "txt"
+        },
+        {
+            "param-name": "extract_root_certs",
+            "default-value": "N"
+        }
+    ]
+}

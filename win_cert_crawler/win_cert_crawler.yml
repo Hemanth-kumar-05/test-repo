@@ -1,0 +1,28 @@
+---
+- name: Collect certificates locally
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    # - name: Show operation_mode
+    #   debug:
+    #     msg: "operation_mode: {{ operation_mode }} (length={{ operation_mode | length }})"
+
+    - name: Include role install_and_config (collect_certs)
+      include_role:
+        name: install_and_config
+        tasks_from: collect_certs
+      when: operation_mode is defined and operation_mode == "opmode1"
+
+- name: Configure certificates on Windows
+  hosts: windows
+  gather_facts: false
+  tasks:
+    # - name: Show operation_mode
+    #   debug:
+    #     msg: "operation_mode = {{ operation_mode | default('UNDEFINED') }}"
+
+    - name: Include role install_and_config (config_target)
+      import_role:
+        name: install_and_config
+        tasks_from: config_target
+      when: operation_mode == "opmode1"

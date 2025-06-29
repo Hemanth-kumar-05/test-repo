@@ -1,0 +1,116 @@
+---
+- name: Collect user inputs on localhost
+  hosts: localhost
+  gather_facts: no
+
+  tasks:
+    - name: Collect user indexes dynamically
+      set_fact:
+        user_indexes: >-
+          {{
+            hostvars[inventory_hostname].keys()
+            | select('match', '^user[0-9]+_username$')
+            | map('regex_replace', '^user([0-9]+)_username$', '\1')
+            | map('int')
+            | list
+            | sort
+          }}
+
+    - name: Rebuild user input records
+      set_fact:
+        user_records: |
+          {% set out = [] %}
+          {% for i in user_indexes %}
+          {% set username = vars['user' ~ i ~ '_username'] %}
+          {% set pwd = vars['user' ~ i ~ '_pwd'] %}
+          {% if username | trim != '' and pwd | trim != '' %}
+          {% set _ = out.append({
+            'username': username,
+            'password': pwd
+          }) %}
+          {% endif %}
+          {% endfor %}
+          {{ out }}
+
+    - name: Debug final user records
+      debug:
+        var: user_records
+
+
+- name: Generate PowerShell script and run encrypt.exe
+  hosts: windows
+  gather_facts: no
+  vars:
+    user_records_b64: "{{ hostvars['localhost'].user_records | to_json | b64encode }}"
+    exe_path: "C:\\Temp\\encrypt.exe"
+    ps1_path: "C:\\Temp\\RunEncryptInputs.ps1"
+
+  tasks:
+
+    - name: Decode the user records JSON
+      set_fact:
+        user_records: "{{ user_records_b64 | b64decode | from_json }}"
+
+    - name: Generate PowerShell script content dynamically
+      set_fact:
+        ps_script: |
+          # path to compiled exe
+          $exePath = "{{ exe_path }}"
+
+          # Start the exe in new window and get process object
+          $p = Start-Process -FilePath $exePath -PassThru
+
+          # Wait briefly for window to appear
+          Start-Sleep -Seconds 2
+
+          # Create the WScript.Shell COM object
+          $wshell = New-Object -ComObject WScript.Shell
+
+          # Activate the window of the process
+          $wshell.AppActivate($p.Id)
+
+          # Wait briefly
+          Start-Sleep -Milliseconds 500
+
+          # "Sending keys" | Out-File C:\Temp\encrypt-log.txt -Append
+
+          {% for item in user_records %}
+          # Send user {{ loop.index }}
+          $wshell.SendKeys("{{ item.username }}{ENTER}")
+          Start-Sleep -Milliseconds 200
+          $wshell.SendKeys("{{ item.password }}{ENTER}")
+          Start-Sleep -Milliseconds 200
+          {% if not loop.last %}
+          $wshell.SendKeys("y{ENTER}")
+          {% else %}
+          $wshell.SendKeys("n{ENTER}")
+          {% endif %}
+          Start-Sleep -Milliseconds 200
+          {% endfor %}
+
+          # Wait for the process to exit
+          Start-Sleep -Seconds 2
+
+    - name: Debug generated PowerShell script
+      debug:
+        var: ps_script
+
+    - name: Write PowerShell script to Windows
+      win_copy:
+        content: "{{ ps_script }}"
+        dest: "{{ ps1_path }}"
+
+    - name: Run PowerShell script to automate encrypt.exe
+      win_shell: |
+        powershell.exe -ExecutionPolicy Bypass -File "{{ ps1_path }}"
+      register: encrypt_output
+    
+    # - name: Debug encrypt.exe output
+    #   debug:
+    #     var: encrypt_output.stdout_lines
+    
+    # - name: Save encrypted passwords to file
+    #   win_copy:
+    #     content: "{{ encrypt_output.stdout }}"
+    #     dest: "C:\\Temp\\encrypted_passwords.txt"
+

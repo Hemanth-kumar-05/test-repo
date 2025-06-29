@@ -1,0 +1,74 @@
+---
+- name: Collect cert variables and build cert records on localhost
+  hosts: localhost
+  gather_facts: no
+
+  tasks:
+    - name: Debug keys from hostvars
+      debug:
+        var: hostvars[inventory_hostname].keys()
+
+    - name: Collect cert indexes dynamically
+      set_fact:
+        cert_indexes: >-
+          {{
+            hostvars[inventory_hostname].keys()
+            | select('match', '^cert[0-9]+_path$')
+            | map('regex_replace', '^cert([0-9]+)_path$', '\1')
+            | list
+          }}
+
+
+    - name: Debug collected indexes
+      debug:
+        var: cert_indexes
+
+    - name: Rebuild cert records
+      set_fact:
+        collected_certs: "{{ cert_records }}"
+      vars:
+        cert_records: |
+          {% set out = [] %}
+          {% for i in cert_indexes | map('int') | sort %}
+          {% set path = vars['cert' ~ i ~ '_path'] %}
+          {% set type = vars['cert' ~ i ~ '_type'] %}
+          {% if path | trim != '' and type | trim != '' %}
+          {% set _ = out.append({
+            'path': path,
+            'type': type
+          }) %}
+          {% endif %}
+          {% endfor %}
+          {{ out }}
+
+    - name: Show collected certs
+      debug:
+        var: collected_certs
+    
+    - name: Collect ext_root_cert (default to 'no')
+      set_fact:
+        ext_root_cert_flag: "{{ ext_root_cert | default('no') }}"
+
+- name: Generate XML on Windows
+  hosts: windows
+  gather_facts: no
+  vars:
+    json_data_b64: "{{ hostvars['localhost'].collected_certs | to_json | b64encode }}"
+  tasks:
+    - name: Copy PowerShell script to Windows
+      win_copy:
+        src: cert_config.ps1
+        dest: C:\Temp\cert_config.ps1
+
+    - name: Run PowerShell script to generate XML
+      win_shell: >
+        powershell.exe -ExecutionPolicy Bypass -File C:\Temp\cert_config.ps1
+        -installPath "{{ hostvars['localhost'].install_path }}"
+        -jsonB64 "{{ json_data_b64 }}"
+        -extRootCert "{{ hostvars['localhost'].ext_root_cert_flag }}"
+
+      register: script_output
+
+    - name: Show script output
+      debug:
+        var: script_output.stdout

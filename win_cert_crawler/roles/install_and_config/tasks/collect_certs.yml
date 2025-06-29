@@ -1,0 +1,48 @@
+- name: Collect cert indexes dynamically
+  set_fact:
+    cert_indexes: >-
+      {{
+        hostvars[inventory_hostname].keys()
+        | select('match', '^cert[0-9]+_dir_path$')
+        | map('regex_replace', '^cert([0-9]+)_dir_path$', '\1')
+        | list
+      }}
+
+# - name: Debug collected indexes
+#   debug:
+#     var: cert_indexes
+
+- name: Rebuild cert records
+  set_fact:
+    collected_certs:
+      certs: >-
+        {%- set out = [] -%}
+        {%- for i in cert_indexes | map('int') | sort %}
+          {%- set path = vars['cert' ~ i ~ '_dir_path'] | trim %}
+          {%- set raw_types = vars['cert' ~ i ~ '_types'] %}
+          {%- set types =
+            (raw_types
+              | regex_search('^\\[.*\\]$')
+              | ternary(
+                  raw_types | regex_replace("[\\[\\]'\\\"]", "") | split(","),
+                  [raw_types]
+                )
+            )
+          %}
+          {%- if path != '' %}
+            {%- for t in types %}
+              {%- if t | trim != '' %}
+                {{ out.append({'path': path, 'type': t | trim}) }}
+              {%- endif %}
+            {%- endfor %}
+          {%- endif %}
+        {%- endfor %}
+        {{ out }}
+
+# - name: Show collected certs
+#   debug:
+#     var: collected_certs
+
+- name: Generate JSON B64 for PowerShell
+  set_fact:
+    json_data_b64: "{{ collected_certs | to_json | b64encode }}"

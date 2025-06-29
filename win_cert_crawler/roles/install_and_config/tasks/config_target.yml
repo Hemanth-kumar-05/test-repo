@@ -1,0 +1,23 @@
+- name: Ensure installation path exists on Windows
+  win_file:
+    path: "{{ installation_path }}"
+    state: directory
+
+- name: Copy PowerShell script to Windows
+  win_copy:
+    src: cert_config.ps1
+    dest: "{{ installation_path }}cert_config.ps1"
+
+- name: Run PowerShell script to generate XML
+  set_fact:
+    ext_root_cert_flag: "{{ extract_root_certs | default('N') }}"
+  win_shell: >
+    powershell.exe -ExecutionPolicy Bypass -File "{{ installation_path }}cert_config.ps1"
+    -installPath "{{ installation_path }}certs.ini"
+    -jsonB64 "{{ hostvars['localhost']['json_data_b64'] }}"
+    -extRootCert "{{ ext_root_cert_flag }}"
+  register: script_output
+
+# - name: Show script output
+#   debug:
+#     var: script_output.stdout
