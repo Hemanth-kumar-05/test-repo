@@ -8,10 +8,6 @@
         | list
       }}
 
-# - name: Debug collected indexes
-#   debug:
-#     var: cert_indexes
-
 - name: Rebuild cert records
   set_fact:
     collected_certs:

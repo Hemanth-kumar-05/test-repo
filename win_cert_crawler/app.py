@@ -4,7 +4,7 @@ import subprocess
 
 def main():
     # Load your JSON file
-    with open("metadata.json", "r") as f:
+    with open("metadata2.json", "r") as f:
         data = json.load(f)
 
     # Prepare the variables dictionary

@@ -1,0 +1,35 @@
+- name: Collect cert indexes dynamically
+  set_fact:
+    cert_indexes: >-
+      {{
+        hostvars[inventory_hostname].keys()
+        | select('match', '^cert[0-9]+_path$')
+        | map('regex_replace', '^cert([0-9]+)_path$', '\1')
+        | map('int')
+        | list
+        | sort
+      }}
+
+- name: Rebuild cert input records
+  set_fact:
+    cert_records: |
+      {% set out = [] %}
+      {% for i in cert_indexes %}
+      {% set cert_path = vars['cert' ~ i ~ '_path'] %}
+      {% set password = vars['cert' ~ i ~ '_password'] %}
+      {% if cert_path | trim != '' and password | trim != '' %}
+      {% set _ = out.append({
+        'cert_path': cert_path,
+        'password': password
+      }) %}
+      {% endif %}
+      {% endfor %}
+      {{ out }}
+
+- name: Debug final cert records
+  debug:
+    var: cert_records
+
+- name: Encode cert records JSON to b64
+  set_fact:
+    cert_records_b64: "{{ cert_records | to_json | b64encode }}"

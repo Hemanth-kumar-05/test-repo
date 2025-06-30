@@ -1,0 +1,36 @@
+{
+    "params": [
+        {
+            "param-name": "installation_path",
+            "default-value": "C:/Temp/CertCrawler/"
+        },
+        {
+            "param-name": "operation_mode",
+            "default-value": "opmode2"
+        },
+        {
+            "param-name": "cert1_path",
+            "default-value": "C:/Cert/MyCerts/Certificate.pex"
+        },
+        {
+            "param-name": "cert1_password",
+            "default-value": "hbcknecbec"
+        },
+        {
+            "param-name": "cert2_path",
+            "default-value": "C:/Cert/MyCerts/Personal/SSLCert.pfx"
+        },
+        {
+            "param-name": "cert2_password",
+            "default-value": "ncinencieic"
+        },
+        {
+            "param-name": "cert3_path",
+            "default-value": "C:/Cert/MyCerts/Personal/WinConfig/AWED.per"
+        },
+        {
+            "param-name": "cert3_password",
+            "default-value": "jebcjecl"
+        }
+    ]
+}

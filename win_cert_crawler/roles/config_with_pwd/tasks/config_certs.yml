@@ -1,0 +1,92 @@
+- name: Decode the cert records JSON
+  set_fact:
+    cert_records: "{{ hostvars['localhost']['cert_records_b64'] | b64decode | from_json }}"
+
+- name: Debug decoded cert records
+  debug:
+    var: cert_records
+
+- name: Check if encrypt.exe exists
+  win_stat:
+    path: "{{ exe_path }}"
+  register: encrypt_exe_status
+
+- name: Copy encrypt.exe if it does not exist
+  win_copy:
+    src: "encrypt.exe"
+    dest: "{{ exe_path }}"
+  when: not encrypt_exe_status.stat.exists
+
+- name: Generate PowerShell script content dynamically
+  set_fact:
+    ps_script: |
+      # Path to compiled exe
+      $exePath = "{{ exe_path }}"
+
+      # Start the exe in a new window and get the process object
+      $p = Start-Process -FilePath $exePath -PassThru
+
+      # Wait for the window to appear (increase if needed)
+      Start-Sleep -Seconds 3
+
+      # Create the WScript.Shell COM object
+      $wshell = New-Object -ComObject WScript.Shell
+
+      # Activate the window of the process
+      $wshell.AppActivate($p.Id)
+
+      # Wait briefly after activation
+      Start-Sleep -Milliseconds 800
+
+      {% for item in cert_records %}
+      # Send certificate path for item {{ loop.index }}
+      $wshell.SendKeys("{{ item.cert_path | replace('\\', '\\\\') }}")
+      Start-Sleep -Milliseconds 500
+      $wshell.SendKeys("{ENTER}")
+      Start-Sleep -Seconds 1
+
+      # Send password for item {{ loop.index }}
+      $wshell.SendKeys("{{ item.password }}")
+      Start-Sleep -Milliseconds 500
+      $wshell.SendKeys("{ENTER}")
+      Start-Sleep -Seconds 1
+
+      {% if not loop.last %}
+      # Confirm to continue (y)
+      $wshell.SendKeys("y")
+      Start-Sleep -Milliseconds 500
+      $wshell.SendKeys("{ENTER}")
+      Start-Sleep -Seconds 1
+      {% else %}
+      # Confirm to terminate (n)
+      $wshell.SendKeys("n")
+      Start-Sleep -Milliseconds 500
+      $wshell.SendKeys("{ENTER}")
+      Start-Sleep -Seconds 1
+      {% endif %}
+      {% endfor %}
+
+      # Final wait to ensure process finishes
+      Start-Sleep -Seconds 3
+# - name: Debug generated PowerShell script
+#   debug:
+#     var: ps_script
+
+- name: Ensure target directory exists
+  win_file:
+    path: "{{ installation_path }}"
+    state: directory
+
+- name: Write PowerShell script to Windows
+  win_copy:
+    content: "{{ ps_script }}"
+    dest: "{{ ps1_path }}"
+
+- name: Run PowerShell script to automate encrypt.exe
+  win_shell: |
+    powershell.exe -ExecutionPolicy Bypass -File "{{ ps1_path }}"
+  register: encrypt_output
+
+- name: Show encrypt.exe output
+  debug:
+    var: encrypt_output.stdout_lines

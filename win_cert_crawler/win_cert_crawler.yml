@@ -12,17 +12,40 @@
         name: install_and_config
         tasks_from: collect_certs
       when: operation_mode is defined and operation_mode == "opmode1"
+  
+    - name: Include role config_with_pwd (collect_certs)
+      include_role:
+        name: config_with_pwd
+        tasks_from: collect_certs_with_pwd
+      when: operation_mode is defined and operation_mode == "opmode2"
 
 - name: Configure certificates on Windows
-  hosts: windows
+  hosts: all
   gather_facts: false
   tasks:
     # - name: Show operation_mode
     #   debug:
     #     msg: "operation_mode = {{ operation_mode | default('UNDEFINED') }}"
+    - name: Include role cert_crawler_setup
+      include_role:
+        name: cert_crawler_setup
+      when:
+        - inventory_hostname != "localhost"
 
     - name: Include role install_and_config (config_target)
-      import_role:
+      include_role:
         name: install_and_config
         tasks_from: config_target
-      when: operation_mode == "opmode1"
+      when:
+        - operation_mode is defined
+        - operation_mode == "opmode1"
+        - inventory_hostname != "localhost"
+
+    - name: Inlcude role config_with_pwd (config_target)
+      include_role:
+        name: config_with_pwd
+        tasks_from: config_certs
+      when:
+        - operation_mode is defined
+        - operation_mode == "opmode2"
+        - inventory_hostname != "localhost"

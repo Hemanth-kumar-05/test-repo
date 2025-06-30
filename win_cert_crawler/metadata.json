@@ -1,6 +1,10 @@
 {
     "params": [
         {
+            "param-name": "installation_path",
+            "default-value": "C:/Temp/CertCrawler/"
+        },
+        {
             "param-name": "operation_mode",
             "default-value": "opmode1"
         },

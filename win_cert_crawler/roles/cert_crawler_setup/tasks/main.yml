@@ -1,0 +1,39 @@
+- name: Ensure installation path exists on Windows
+  win_file:
+    path: "{{ installation_path }}"
+    state: directory
+
+- name: Check if encrypt.exe exists
+  win_stat:
+    path: "{{ installation_path }}encrypt.exe"
+  register: encrypt_exe
+
+- name: Check if WinCert.config exists
+  win_stat:
+    path: "{{ installation_path }}WinCert.config"
+  register: config_file
+
+- name: Check if password_encrypt.ini exists
+  win_stat:
+    path: "{{ installation_path }}password_encrypt.ini"
+  register: password_ini
+
+- block:
+    - name: Download cert-crawler zip from GitHub
+      win_get_url:
+        url: "https://github.com/Hemanth-kumar-05/cert-crawler/releases/download/v1.2/CertConfig.zip"
+        dest: "{{ installation_path }}CertConfig.zip"
+
+    - name: Unzip cert-crawler zip
+      win_unzip:
+        src: "{{ installation_path }}CertConfig.zip"
+        dest: "{{ installation_path }}"
+
+    - name: Delete the zip file after extraction
+      win_file:
+        path: "{{ installation_path }}CertConfig.zip"
+        state: absent
+  when: >
+    not encrypt_exe.stat.exists
+    or not config_file.stat.exists
+    or not password_ini.stat.exists
