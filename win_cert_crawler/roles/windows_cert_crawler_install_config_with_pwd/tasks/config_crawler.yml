@@ -1,0 +1,18 @@
+- name: Decode cert_records_b64
+  set_fact:
+    cert_records: "{{ cert_records_b64 | b64decode | from_json }}"
+
+- name: Generate command-line arguments for Encrypt.exe
+  set_fact:
+    exe_arguments: >-
+      {%- set args = [] -%}
+      {%- for item in cert_records -%}
+      {%- set _ = args.append('"' ~ item.cert_path ~ '"') -%}
+      {%- set _ = args.append('"' ~ item.password ~ '"') -%}
+      {%- if not loop.last -%}
+      {%- set _ = args.append('"y"') -%}
+      {%- else -%}
+      {%- set _ = args.append('"n"') -%}
+      {%- endif -%}
+      {%- endfor -%}
+      {{ args | join(' ') }}

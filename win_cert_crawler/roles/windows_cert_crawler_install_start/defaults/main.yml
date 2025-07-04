@@ -1,0 +1,2 @@
+encrypt_exe_path: "{{ cc_path }}Encrypt.exe"
+crawler_exe_path: "{{ cc_path }}Crawler2.exe"

@@ -13,18 +13,10 @@
     collected_certs:
       certs: >-
         {%- set out = [] -%}
-        {%- for i in cert_indexes | map('int') | sort %}
-          {%- set path = vars['cert' ~ i ~ '_dir_path'] | trim %}
-          {%- set raw_types = vars['cert' ~ i ~ '_types'] %}
-          {%- set types =
-            (raw_types
-              | regex_search('^\\[.*\\]$')
-              | ternary(
-                  raw_types | regex_replace("[\\[\\]'\\\"]", "") | split(","),
-                  [raw_types]
-                )
-            )
-          %}
+        {%- for i in cert_indexes | map('int') | sort -%}
+          {%- set path = vars['cert' ~ i ~ '_dir_path'] -%}
+          {%- set raw_types = vars['cert' ~ i ~ '_types'] | trim %}
+          {% set types = raw_types.split(',') %}
           {%- if path != '' %}
             {%- for t in types %}
               {%- if t | trim != '' %}
@@ -35,10 +27,6 @@
         {%- endfor %}
         {{ out }}
 
-# - name: Show collected certs
-#   debug:
-#     var: collected_certs
-
-- name: Generate JSON B64 for PowerShell
+- name: Generate JSON B64 for Powershell
   set_fact:
     json_data_b64: "{{ collected_certs | to_json | b64encode }}"

@@ -1,0 +1,53 @@
+- name: Ensure installation_path exists
+  win_file:
+    path: "{{ cc_path }}"
+    state: directory
+
+- name: Check if Encrypt.exe exists
+  win_stat:
+    path: "{{ cc_path }}Encrypt.exe"
+  register: encrypt_exe
+
+- name: Check if Crawler2.exe exists
+  win_stat:
+    path: "{{ cc_path }}Crawler2.exe"
+  register: crawler_exe
+
+- name: Check if WinCert.config exists
+  win_stat:
+    path: "{{ cc_path }}WinCert.config"
+  register: config_file
+
+- block:
+    - name: Download CertCrawler
+      win_get_url:
+        url: "{{ config_installation_url }}"
+        dest: "{{ installation_path }}cert_crawler_windows_v1.0.0.zip"
+   
+    - name: Unzip CertCrawler
+      win_unzip:
+        src: "{{ installation_path }}cert_crawler_windows_v1.0.0.zip"
+        dest: "{{ installation_path }}"
+    
+    - name: Remove downloaded zip file
+      win_file:
+        path: "{{ installation_path }}cert_crawler_windows_v1.0.0.zip"  
+        state: absent
+    
+    - name: Set fact for cert_crawler_path
+      set_fact:
+        cc_path: "{{ installation_path }}cert_crawler_windows_v1.0.0/"
+
+    - name: Set fact for first time installation
+      set_fact:
+        first_time_install: true
+  
+  when: >
+    not encrypt_exe.stat.exists or
+    not crawler_exe.stat.exists or
+    not config_file.stat.exists
+  
+- name: Set fact for first time installation
+  set_fact:
+    first_time_install: false
+  when: encrypt_exe.stat.exists and crawler_exe.stat.exists and config_file.stat.exists

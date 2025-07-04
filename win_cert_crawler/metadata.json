@@ -14,7 +14,7 @@
         },
         {
             "param-name": "cert1_types",
-            "default-value": ["p12", "pfx", "cer", "crt", "txt", "pem"]
+            "default-value": "p12,pfx,cer,crt,txt,pem"
         },
         {
             "param-name": "cert2_dir_path",
@@ -22,7 +22,7 @@
         },
         {
             "param-name": "cert2_types",
-            "default-value": ["cer", "crt"]
+            "default-value": "cer,crt"
         },
         {
             "param-name": "cert3_dir_path",
@@ -34,7 +34,7 @@
         },
         {
             "param-name": "extract_root_certs",
-            "default-value": "N"
+            "default-value": "Y"
         }
     ]
 }

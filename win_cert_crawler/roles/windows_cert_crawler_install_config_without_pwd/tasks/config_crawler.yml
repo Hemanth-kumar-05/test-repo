@@ -1,0 +1,18 @@
+- name: Copy Powershell script to Windows
+  win_copy:
+    src: cert_config.ps1
+    dest: "{{ cc_path }}cert_config.ps1"
+
+- name: Define extract root certificates flag
+  set_fact:
+    ext_root_cert_flag: "{{ extract_root_certs | default('N') }}"
+
+- name: Run Powershell script to generate XML
+  win_shell: >
+    powershell.exe -ExecutionPolicy Bypass -File "{{ cc_path }}cert_config.ps1" -installPath "{{ cc_path }}" -jsonB64 "{{ json_data_b64 }}" -extRootCert "{{ ext_root_cert_flag }}" -firstTimeInstallString "{{ first_time_install }}"
+  register: ps_output
+  failed_when: ps_output.rc != 0
+
+- name: Display Powershell script output
+  debug:
+    msg: "Powershell script output: {{ ps_output.stdout }}"

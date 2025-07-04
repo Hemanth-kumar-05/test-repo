@@ -1,3 +1,0 @@
-cert_records_b64: "{{ cert_records | to_json | b64encode }}"
-exe_path: "{{ installation_path }}encrypt.exe"
-ps1_path: "{{ installation_path }}RunEncryptInputs.ps1"

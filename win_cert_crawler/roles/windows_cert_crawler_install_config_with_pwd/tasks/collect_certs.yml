@@ -10,26 +10,19 @@
         | sort
       }}
 
-- name: Rebuild cert input records
+- name: Rebuild cert records
   set_fact:
     cert_records: |
-      {% set out = [] %}
-      {% for i in cert_indexes %}
+      {%- set out = [] -%}
+      {%- for i in cert_indexes -%}
       {% set cert_path = vars['cert' ~ i ~ '_path'] %}
       {% set password = vars['cert' ~ i ~ '_password'] %}
       {% if cert_path | trim != '' and password | trim != '' %}
-      {% set _ = out.append({
-        'cert_path': cert_path,
-        'password': password
-      }) %}
+      {% set _ = out.append({'cert_path': cert_path, 'password': password}) %}
       {% endif %}
-      {% endfor %}
+      {%- endfor %}
       {{ out }}
 
-- name: Debug final cert records
-  debug:
-    var: cert_records
-
-- name: Encode cert records JSON to b64
+- name: Generate JSON B64 for Powershell
   set_fact:
     cert_records_b64: "{{ cert_records | to_json | b64encode }}"

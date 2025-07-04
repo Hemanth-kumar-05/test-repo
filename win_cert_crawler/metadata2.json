@@ -10,7 +10,7 @@
         },
         {
             "param-name": "cert1_path",
-            "default-value": "C:/Cert/MyCerts/Certificate.pex"
+            "default-value": "C:/Cert/MyCerts/Certificate.p12"
         },
         {
             "param-name": "cert1_password",
@@ -18,7 +18,7 @@
         },
         {
             "param-name": "cert2_path",
-            "default-value": "C:/Cert/MyCerts/Personal/SSLCert.pfx"
+            "default-value": "C:/Cert/MyCerts/Personal/SSLCert.p12"
         },
         {
             "param-name": "cert2_password",
@@ -26,7 +26,7 @@
         },
         {
             "param-name": "cert3_path",
-            "default-value": "C:/Cert/MyCerts/Personal/WinConfig/AWED.per"
+            "default-value": "C:/Cert/MyCerts/Personal/WinConfig/AWED.p12"
         },
         {
             "param-name": "cert3_password",
