@@ -1,0 +1,47 @@
+---
+- name: Configure certificates on Windows
+  hosts: all
+  gather_facts: false
+  vars:
+    cc_path: "{{ installation_path }}cert_crawler_windows_v1.0.0/"
+
+  tasks:
+    - name: Include collect certificates without password role
+      include_role:
+        name: windows_cert_crawler_install_config_without_pwd
+        tasks_from: collect_certs
+      when: 
+        - operation_mode is defined
+        - operation_mode == "opmode1"
+
+    - name: Include collect certificates with password role
+      include_role:
+        name: windows_cert_crawler_install_config_with_pwd
+        tasks_from: collect_certs
+      when: 
+        - operation_mode is defined
+        - operation_mode == "opmode2"
+  
+    - name: Include setup certificate crawler role
+      include_role:
+        name: windows_cert_crawler_install_setup
+    
+    - name: Include configure certificate crawler without password role
+      include_role:
+        name: windows_cert_crawler_install_config_without_pwd
+        tasks_from: config_crawler
+      when: 
+        - operation_mode is defined
+        - operation_mode == "opmode1"
+    
+    - name: Include configure certificate crawler with password role
+      include_role:
+        name: windows_cert_crawler_install_config_with_pwd
+        tasks_from: config_crawler
+      when: 
+        - operation_mode is defined
+        - operation_mode == "opmode2"
+    
+    - name: Include start certificate crawler role
+      include_role:
+        name: windows_cert_crawler_install_start

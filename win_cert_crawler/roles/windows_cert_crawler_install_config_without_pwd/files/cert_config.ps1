@@ -5,7 +5,9 @@ Param(
     [Parameter(Mandatory = $true)]
     [string]$jsonB64,
 
-    [string]$extRootCert
+    [string]$extRootCert,
+
+    [string]$firstTimeInstallString
 )
 
 try {
@@ -55,75 +57,60 @@ if ((Test-Path -Path $installPath) -and (Get-Item -Path $installPath).PSIsContai
 $outputDir = Split-Path -Path $installPath -Parent
 New-Item -ItemType Directory -Path $outputDir -Force -ErrorAction SilentlyContinue | Out-Null
 
-# Check whether file exists and has content
-$createNewXml = $true
-if (Test-Path -Path $installPath) {
-    $fileInfo = Get-Item -Path $installPath
-    if ($fileInfo.Length -gt 0) {
-        $createNewXml = $false
-    }
+# Check first time installation string and convert into boolean
+$firstTimeInstall = $false
+if ($firstTimeInstallString.ToLower() -eq "true") {
+    $firstTimeInstall = $true
+} elseif ($firstTimeInstallString.ToLower() -eq "false") {
+    $firstTimeInstall = $false
+} else {
+    Write-Error "Invalid value for firstTimeInstallString: '$firstTimeInstallString'. Expected 'true' or 'false'."
+    exit 1
 }
 
-if ($createNewXml) {
-    Write-Host "INFO: Creating new XML structure..."
+if ($firstTimeInstall -eq $true) {
+    Write-Host "DEBUG: First time installation detected. Creating new XML file."
+    $existingCertNodes = $certificatesNode.SelectNodes("add")
+    foreach ($node in $existingCertNodes) {
+        $certificatesNode.RemoveChild($node) | Out-Null
+    }
+    Write-Host "DEBUG: Removed existing certificate nodes."
+}
 
-    [xml]$xml = New-Object System.Xml.XmlDocument
-    $xml.AppendChild($xml.CreateXmlDeclaration("1.0", "UTF-8", $null)) | Out-Null
+foreach ($cert in $certList) {
+    $path = $cert.path
+    $type = $cert.type
 
-    $configuration = $xml.CreateElement("configuration")
-    $xml.AppendChild($configuration) | Out-Null
-
-    $certificatesNode = $xml.CreateElement("Certificates")
-    $configuration.AppendChild($certificatesNode) | Out-Null
-
-    # Add certs
-    foreach ($cert in $certList) {
-        $path = $cert.path
-        $type = $cert.type
-
-        if (-not $folderCodes.ContainsKey($path)) {
-            $sha1 = [System.Security.Cryptography.SHA1]::Create()
-            $bytes = [System.Text.Encoding]::UTF8.GetBytes($path)
-            $hashBytes = $sha1.ComputeHash($bytes)
-            $hashString = ([BitConverter]::ToString($hashBytes)).Replace("-", "")
-            $code = $hashString.ToUpper()
-            $folderCodes[$path] = $code
-        } else {
-            $code = $folderCodes[$path]
-        }
-
-        $tag = "${code}_$($type.ToUpper())"
-        $certNode = $xml.CreateElement("add")
-        $certNode.SetAttribute("tag", $tag)
-        $certNode.SetAttribute("type", $type.ToLower())
-        $certNode.SetAttribute("path", $path)
-
-        $certificatesNode.AppendChild($certNode) | Out-Null
+    if (-not $folderCodes.ContainsKey($path)) {
+        $sha1 = [System.Security.Cryptography.SHA1]::Create()
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($path)
+        $hashBytes = $sha1.ComputeHash($bytes)
+        $hashString = ([BitConverter]::ToString($hashBytes)).Replace("-", "")
+        $code = $hashString.ToUpper()
+        $folderCodes[$path] = $code
+    } else {
+        $code = $folderCodes[$path]
     }
 
-    # Create appSettings
-    $appSettingsNode = $xml.CreateElement("appSettings")
-    $certFlag = if ($extRootCert -eq "True") { "Y" } else { "N" }
+    $tag = "${code}_$($type.ToUpper())"
+    $certNode = $xml.CreateElement("add")
+    $certNode.SetAttribute("tag", $tag);
+    $certNode.SetAttribute("type", $type.ToLower())
+    $certNode.SetAttribute("path", $path)
 
-    $storeNode = $xml.CreateElement("add")
-    $storeNode.SetAttribute("key", "Storecert")
-    $storeNode.SetAttribute("value", $certFlag)
-
-    $appSettingsNode.AppendChild($storeNode) | Out-Null
-    $configuration.AppendChild($appSettingsNode) | Out-Null
-}
-else {
-    Write-Host "INFO: Loading existing XML and adding certs..."
+    $certificatesNode.AppendChild($certNode) | Out-Null
+} else {
+    Write-Host "DEBUG: Not first time installation. Skipping XML creation."
 
     [xml]$xml = Get-Content -Path $installPath
 
     $configuration = $xml.configuration
 
     if (-not $configuration) {
-        throw "Invalid XML: <configuration> element not found."
+        Write-Error "Configuration node not found in existing XML."
+        exit 1
     }
 
-    # Get or create <Certificates>
     $certificatesNode = $configuration.Certificates
     if (-not $certificatesNode) {
         $certificatesNode = $xml.CreateElement("Certificates")
@@ -132,7 +119,7 @@ else {
 
     # Add certs
     foreach ($cert in $certList) {
-        $path = $cert.path
+        $path = $cert.path  
         $type = $cert.type
 
         if (-not $folderCodes.ContainsKey($path)) {
@@ -154,7 +141,7 @@ else {
 
         $certificatesNode.AppendChild($certNode) | Out-Null
     }
-
+    
     # Get or create appSettings
     $appSettingsNode = $configuration.appSettings
     if (-not $appSettingsNode) {
@@ -168,22 +155,24 @@ else {
         $storeNode = $xml.CreateElement("add")
         $storeNode.SetAttribute("key", "Storecert")
         $appSettingsNode.AppendChild($storeNode) | Out-Null
-    }
+    } 
 
     $certFlag = if ($extRootCert -eq "True") { "Y" } else { "N" }
     $storeNode.SetAttribute("value", $certFlag)
 }
 
-# Save
+# Save the updated XML
 $xml.Save($installPath)
 
-Write-Host "WinCert.config updated successfully with $($certList.Count) cert(s) at $installPath"
+Write-Host "DEBUG: XML configuration saved to $installPath"
 
-# Remove the script itself
+# Remove script once done
 $scriptPath = $MyInvocation.MyCommand.Path
 if (Test-Path -Path $scriptPath) {
     Remove-Item -Path $scriptPath -Force -ErrorAction SilentlyContinue
-    Write-Host "Removed script file: $scriptPath"
+    Write-Host "DEBUG: Removed script file $scriptPath"
+    exit 0
 } else {
-    Write-Host "Script file not found: $scriptPath"
+    Write-Host "DEBUG: Script file $scriptPath not found, skipping removal."
+    exit 1
 }

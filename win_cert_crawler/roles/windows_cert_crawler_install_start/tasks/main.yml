@@ -1,0 +1,45 @@
+- name: Debug - Show executable paths
+  debug:
+    msg: 
+      - "Encrypt.exe path: {{ encrypt_exe_path }}"
+      - "Crawler2.exe path: {{ crawler_exe_path }}"
+      - "CC Path: {{ cc_path }}"
+      - "Installation Path: {{ installation_path }}"
+
+- name: Verify current host and working directory
+  win_shell: |
+    $hostname = $env:COMPUTERNAME
+    $username = $env:USERNAME
+    $currentDir = Get-Location
+    Write-Output "Running on host: $hostname"
+    Write-Output "Running as user: $username"
+    Write-Output "Current directory: $currentDir"
+    Write-Output "Executable path exists: $(Test-Path '{{ encrypt_exe_path }}')"
+    Write-Output "Crawler path exists: $(Test-Path '{{ crawler_exe_path }}')"
+  register: host_info
+
+- name: Display host information
+  debug:
+    msg: "{{ host_info.stdout_lines }}"
+
+- name: Execute Encrypt.exe with args
+  win_shell: >
+    powershell.exe -ExecutionPolicy Bypass -Command "Set-Location '{{ cc_path }}'; & '{{ encrypt_exe_path }}' {{ exe_arguments }}; exit $LASTEXITCODE"
+  register: encrypt_output
+  failed_when: encrypt_output.rc != 0
+  when: operation_mode == "opmode2"
+
+- name: Display Encrypt.exe output
+  debug:
+    msg: "Encrypt.exe output: {{ encrypt_output.stdout }}"
+  when: operation_mode == "opmode2"
+
+- name: Execute Crawler2.exe
+  win_shell: >
+    powershell.exe -ExecutionPolicy Bypass -Command "Set-Location '{{ cc_path }}'; & '{{ crawler_exe_path }}'; exit $LASTEXITCODE"
+  register: crawler_output
+  failed_when: crawler_output.rc != 0
+
+- name: Display Crawler2.exe output
+  debug:
+    msg: "Crawler2.exe output: {{ crawler_output.stdout }}"

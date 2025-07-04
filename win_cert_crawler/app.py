@@ -25,7 +25,7 @@ def main():
     extra_vars_str = " ".join(extra_vars)
 
     # The playbook you want to run
-    playbook = "win_cert_crawler.yml"
+    playbook = "windows_cert_crawler_install.yml"
 
     # Build the ansible-playbook command
     command = f"ansible-playbook -i hosts.ini {playbook} -e '{extra_vars_str}'"
